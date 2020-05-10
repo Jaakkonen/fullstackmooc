@@ -4,12 +4,12 @@ import { ALL_BOOKS } from '../graphql/queries'
 
 
 
-const Books = (props) => {
+const Books = ({ show }) => {
   const [genreFilter, setGenreFilter] = useState()
   const result = useQuery(ALL_BOOKS, {
     variables: { genre: genreFilter }
   })
-  if (!props.show || result.loading) {
+  if (!show || result.loading) {
     return null
   }
   const genreClickHandler = name => e => setGenreFilter(name)
@@ -36,7 +36,7 @@ const Books = (props) => {
               <td>{a.title}</td>
               <td>{a.author.name}</td>
               <td>{a.published}</td>
-              <td>{a.genres.map(g => (<a onClick={genreClickHandler(g)}>{g} </a>))}</td>
+              <td>{a.genres.map(g => (<a key={g} onClick={genreClickHandler(g)}>{g} </a>))}</td>
             </tr>
           )}
         </tbody>

@@ -6,6 +6,7 @@ import { ALL_AUTHORS } from '../graphql/queries'
 import { EDIT_AUTHOR } from '../graphql/mutations'
 
 const Authors = (props) => {
+  console.log("Authors updating")
   const result = useQuery(ALL_AUTHORS)
   const [editAuthor] = useMutation(EDIT_AUTHOR, {
     refetchQueries: [{ query: ALL_AUTHORS }]

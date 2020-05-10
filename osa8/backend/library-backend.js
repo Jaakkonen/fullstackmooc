@@ -1,4 +1,4 @@
-const { ApolloServer, gql, UserInputError } = require('apollo-server')
+const { ApolloServer, gql, UserInputError, PubSub } = require('apollo-server')
 const { v4: uuid } = require('uuid');
 const mongoose = require('mongoose')
 const { Author, Book, User } = require('./db')
@@ -7,6 +7,7 @@ mongoose.connect('mongodb://db:27017/test')
 const jwt = require('jsonwebtoken')
 
 const JWT_SECRET = 'a very-secret haxhaxhaxjwt security Token11231 ebin :-DDD ylilauta'
+const pubsub = new PubSub()
 
 const typeDefs = gql`
   type Book {
@@ -40,7 +41,9 @@ const typeDefs = gql`
     createUser(name: String!, password: String!): Boolean
     login(name: String!, password: String!): String
   }
-  
+  type Subscription {
+    bookAdded: Book!
+  }
 `
 
 const resolvers = {
@@ -64,12 +67,10 @@ const resolvers = {
         await Author.findOne({ name: author }).exec()
         || await new Author({ name: author }).save().catch(e => { throw new UserInputError(e.message) })
 
-      const bookmodel = new Book({ title, author: authorModel.id, published, genres });
+      const bookmodel = new Book({ title, author: authorModel, published, genres });
       await bookmodel.save().catch(e => { throw new UserInputError(e.message) })
-      return {
-        ...bookmodel.toObject(),
-        author
-      }
+      pubsub.publish('BOOK_ADDED', { bookAdded: bookmodel })
+      return bookmodel
     },
     editAuthor: async (root, { name, setBornTo }, { user }) => {
       if (!user) throw new UserInputError("Login required")
@@ -91,6 +92,11 @@ const resolvers = {
         throw new UserInputError("Username of password invalid")
       return jwt.sign({ username: name }, JWT_SECRET)
     }
+  },
+  Subscription: {
+    bookAdded: {
+      subscribe: () => pubsub.asyncIterator(['BOOK_ADDED'])
+    }
   }
 }
 
@@ -107,6 +113,7 @@ const server = new ApolloServer({
   }
 })
 
-server.listen().then(({ url }) => {
+server.listen().then(({ url, subscriptionsUrl }) => {
   console.log(`Server ready at ${url}`)
+  console.log(`Subscriptions ready at ${subscriptionsUrl}`)
 })
